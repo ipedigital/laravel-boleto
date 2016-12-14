@@ -113,7 +113,7 @@ class Hsbc  extends AbstractBoleto implements BoletoContract
     protected function gerarNossoNumero()
     {
         $range = Util::numberFormatGeral($this->getRange(), 5);
-        $numero = Util::numberFormatGeral($this->getNumeroDocumento(), 5);
+        $numero = Util::numberFormatGeral($this->getNumero(), 5);
         $dv = Util::modulo11($range . $numero, 2, 7);
         return $range . $numero . $dv;
     }

@@ -86,7 +86,7 @@ class Banrisul extends AbstractBoleto implements BoletoContract
      */
     protected function gerarNossoNumero()
     {
-        $nossoNumero = Util::numberFormatGeral($this->getNumeroDocumento(), 8) . '-' . $this->duploDigitoBanrisul(Util::numberFormatGeral($this->getNumeroDocumento(), 8));
+        $nossoNumero = Util::numberFormatGeral($this->getNumero(), 8) . '-' . $this->duploDigitoBanrisul(Util::numberFormatGeral($this->getNumero(), 8));
         return $nossoNumero;
     }
 

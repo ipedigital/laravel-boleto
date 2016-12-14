@@ -39,7 +39,7 @@ class Caixa  extends AbstractBoleto implements BoletoContract
      */
     protected function gerarNossoNumero()
     {
-        $numero = $this->getNumeroDocumento();
+        $numero = $this->getNumero();
         $composicao = '1';
         if ($this->getCarteira() == 'SR') {
             $composicao = '2';
