@@ -39,15 +39,15 @@ class BoletoTest extends TestCase
 
     public static function tearDownAfterClass()
     {
-//        $aFiles = [
-//            __DIR__,
-//            'files',
-//        ];
-//        $files = glob(implode(DIRECTORY_SEPARATOR, $aFiles) . '/*'); // get all file names
-//        foreach($files as $file){
-//            if(is_file($file))
-//                @unlink($file);
-//        }
+        $aFiles = [
+            __DIR__,
+            'files',
+        ];
+        $files = glob(implode(DIRECTORY_SEPARATOR, $aFiles) . '/*'); // get all file names
+        foreach($files as $file){
+            if(is_file($file))
+                @unlink($file);
+        }
     }
 
     public function testAddBoletos()
@@ -378,6 +378,35 @@ class BoletoTest extends TestCase
                 'byte'                   => 2,
                 'agencia'                => 1111,
                 'posto'                  => 11,
+                'conta'                  => 11111,
+                'descricaoDemonstrativo' => ['demonstrativo 1', 'demonstrativo 2', 'demonstrativo 3'],
+                'instrucoes'             => ['instrucao 1', 'instrucao 2', 'instrucao 3'],
+                'aceite'                 => 'S',
+                'especieDoc'             => 'DM',
+            ]
+        );
+        $this->assertInternalType('array', $boleto->toArray());
+        $this->assertNotNull($boleto->renderHTML());
+        $this->assertNotNull($boleto->renderPDF());
+    }
+
+    public function testBoletoBancoob()
+    {
+        $boleto = new Boleto\Bancoob(
+            [
+                'logo'                   => realpath(__DIR__ . '/../../logos/') . DIRECTORY_SEPARATOR . '756.png',
+                'dataVencimento'         => new \Carbon\Carbon(),
+                'valor'                  => 100,
+                'multa'                  => false,
+                'juros'                  => false,
+                'numero'                 => 1,
+                'numeroDocumento'        => 1,
+                'pagador'                => self::$pagador,
+                'beneficiario'           => self::$beneficiario,
+                'carteira'               => '1',
+                'byte'                   => 2,
+                'agencia'                => 1111,
+                'convenio'               => 123123,
                 'conta'                  => 11111,
                 'descricaoDemonstrativo' => ['demonstrativo 1', 'demonstrativo 2', 'demonstrativo 3'],
                 'instrucoes'             => ['instrucao 1', 'instrucao 2', 'instrucao 3'],
