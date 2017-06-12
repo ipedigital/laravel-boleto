@@ -267,10 +267,10 @@ class Bb extends AbstractRemessa implements RemessaContract
                 $this->add(157, 158, self::INSTRUCAO_PROTESTAR_VENC_XX);
                 $diasProtesto = Util::formatCnab('9', $boleto->getDiasProtesto(), 2, 0);
             }
-            $juros = 0;
-            if ($boleto->getJuros() > 0) {
-                $juros = Util::percent($boleto->getValor(), $boleto->getJuros())/30;
-            }
+        }
+        $juros = 0;
+        if ($boleto->getJuros() > 0) {
+            $juros = Util::percent($boleto->getValor(), $boleto->getJuros()) / 30;
         }
         $this->add(161, 173, Util::formatCnab('9', $juros, 13, 2));
         $this->add(174, 179, $boleto->getDataDesconto()->format('dmy'));
