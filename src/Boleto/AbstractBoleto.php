@@ -1475,16 +1475,16 @@ abstract class AbstractBoleto implements BoletoContract
                 'sacador_avalista'            =>
                     $this->getSacadorAvalista()
                         ? [
-                            'nome' => $this->getPagador()->getNome(),
-                            'endereco' => $this->getPagador()->getEndereco(),
-                            'bairro' => $this->getPagador()->getBairro(),
-                            'cep' => $this->getPagador()->getCep(),
-                            'uf' => $this->getPagador()->getUf(),
-                            'cidade' => $this->getPagador()->getCidade(),
-                            'documento' => $this->getPagador()->getDocumento(),
-                            'nome_documento' => $this->getPagador()->getNomeDocumento(),
-                            'endereco2' => $this->getPagador()->getCepCidadeUf(),
-                        ]
+                        'nome' => $this->getPagador()->getNome(),
+                        'endereco' => $this->getPagador()->getEndereco(),
+                        'bairro' => $this->getPagador()->getBairro(),
+                        'cep' => $this->getPagador()->getCep(),
+                        'uf' => $this->getPagador()->getUf(),
+                        'cidade' => $this->getPagador()->getCidade(),
+                        'documento' => $this->getPagador()->getDocumento(),
+                        'nome_documento' => $this->getPagador()->getNomeDocumento(),
+                        'endereco2' => $this->getPagador()->getCepCidadeUf(),
+                    ]
                         : [],
                 'pagador'                     => [
                     'nome' => $this->getPagador()->getNome(),

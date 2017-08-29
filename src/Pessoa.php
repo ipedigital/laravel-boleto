@@ -234,7 +234,7 @@ class Pessoa implements PessoaContract
         } elseif (strlen($cpf_cnpj_cei) == 10) {
             return 'CEI';
         }
-        
+
         return 'CNPJ';
     }
     /**
