@@ -38,10 +38,10 @@ class Factory
         $banco = '';
         $namespace = '';
         if (Util::isCnab400($file_content)) {
-            $banco = substr($file_content[0], 76, 3);
+            $banco = mb_substr($file_content[0], 76, 3);
             $namespace = __NAMESPACE__ . '\\Cnab400\\';
         } elseif (Util::isCnab240($file_content)) {
-            $banco = substr($file_content[0], 0, 3);
+            $banco = mb_substr($file_content[0], 0, 3);
             $namespace = __NAMESPACE__ . '\\Cnab240\\';
         }
 
@@ -54,10 +54,12 @@ class Factory
             BoletoContract::COD_BANCO_HSBC => 'Banco\\Hsbc',
             BoletoContract::COD_BANCO_SICREDI => 'Banco\\Sicredi',
             BoletoContract::COD_BANCO_BANRISUL => 'Banco\\Banrisul',
+            BoletoContract::COD_BANCO_BANCOOB => 'Banco\\Bancoob',
+            BoletoContract::COD_BANCO_BNB => 'Banco\\Bnb',
         ];
 
         if (array_key_exists($banco, $aBancos)) {
-            $bancoClass = $namespace . $aBancos[$banco];
+            $bancoClass = $namespace . Util::getBancoClass($banco);
             return new $bancoClass($file_content);
         }
 

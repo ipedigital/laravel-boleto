@@ -1,6 +1,7 @@
 <?php
 namespace Eduardokum\LaravelBoleto\Cnab\Remessa\Cnab400\Banco;
 
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Cnab\Remessa\Cnab400\AbstractRemessa;
 use Eduardokum\LaravelBoleto\Contracts\Cnab\Remessa as RemessaContract;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
@@ -43,6 +44,26 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         parent::__construct($params);
         $this->addCampoObrigatorio('convenio');
     }
+
+    private $especie240 = [
+        '01' => '02', // Duplicata Mercantil
+        '02' => '12', // Nota Promissória
+        '03' => '16', // Nota de Seguro
+        '05' => '17', // Recibo
+        '06' => '16', // Duplicata Rural
+        '08' => '17', // Letra de Câmbio
+        '09' => '99', // Warrant - Outros
+        '10' => '01', // Cheque
+        '12' => '04', // Duplicata de Serviço
+        '13' => '19', // Nota de Débito
+        '14' => '14', // Triplicata Mercantil
+        '15' => '15', // Triplicata de Serviço
+        '18' => '18', // Fatura
+        '20' => '20', // Apólice de Seguro
+        '21' => '21', // Mensalidade Escolar
+        '22' => '22', // Parcela de Consórcio
+        '99' => '99', // Outros
+    ];
 
     /**
      * Código do banco
@@ -99,6 +120,10 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         return $this;
     }
 
+    /**
+     * @return $this|mixed
+     * @throws \Exception
+     */
     protected function header()
     {
         $this->iniciaHeader();
@@ -107,15 +132,15 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         $this->add(2, 2, '1');
         $this->add(3, 9, 'REMESSA');
         $this->add(10, 11, '01');
-        $this->add(12, 26, 'COBRANÇA      ');
+        $this->add(12, 26, Util::formatCnab('X', 'COBRANÇA', 15));
         $this->add(27, 30, Util::formatCnab('9', $this->getAgencia(), 4));
-        $this->add(31, 31, Util::modulo11($this->getAgencia()));
+        $this->add(31, 31, CalculoDv::bancoobAgencia($this->getAgencia()));
         $this->add(32, 40, Util::formatCnab('9', $this->getConvenio(), 9));
         $this->add(41, 46, '');
         $this->add(47, 76, Util::formatCnab('X', $this->getBeneficiario()->getNome(), 30));
         $this->add(77, 79, $this->getCodigoBanco());
         $this->add(80, 94, Util::formatCnab('X', 'BANCOOBCED', 15));
-        $this->add(95, 100, date('dmy'));
+        $this->add(95, 100, $this->getDataRemessa('dmy'));
         $this->add(101, 107, Util::formatCnab('9', $this->getIdremessa(), 7));
         $this->add(108, 394, '');
         $this->add(395, 400, Util::formatCnab('9', 1, 6));
@@ -123,19 +148,26 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         return $this;
     }
 
+    /**
+     * @param BoletoContract $boleto
+     *
+     * @return mixed|void
+     * @throws \Exception
+     */
     public function addBoleto(BoletoContract $boleto)
     {
+        $this->boletos[] = $boleto;
         $this->iniciaDetalhe();
 
         $this->add(1, 1, 1);
         $this->add(2, 3, strlen(Util::onlyNumbers($this->getBeneficiario()->getDocumento())) == 14 ? '02' : '01');
         $this->add(4, 17, Util::formatCnab('9L', $this->getBeneficiario()->getDocumento(), 14));
         $this->add(18, 21, Util::formatCnab('9', $this->getAgencia(), 4));
-        $this->add(22, 22, Util::modulo11($this->getAgencia()));
+        $this->add(22, 22, CalculoDv::bancoobAgencia($this->getAgencia()));
         $this->add(23, 30, Util::formatCnab('9', $this->getConta(), 8));
-        $this->add(31, 31, Util::formatCnab('9', $this->getContaDv(), 1));
+        $this->add(31, 31, Util::formatCnab('9', $this->getContaDv() ?: CalculoDV::bancoobContaCorrente($this->getConta()), 1));
         $this->add(32, 37, '000000');
-        $this->add(38, 62, Util::formatCnab('X', '', 25)); // numero de controle
+        $this->add(38, 62, Util::formatCnab('X', $boleto->getNumeroControle(), 25)); // numero de controle
         $this->add(63, 74, Util::formatCnab('9', $boleto->getNossoNumero(), 12));
         $this->add(75, 76, '01'); //Numero da parcela - Não implementado
         $this->add(77, 78, '00'); //Grupo de valor
@@ -154,23 +186,23 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
             $this->add(109, 110, self::OCORRENCIA_PEDIDO_BAIXA); // BAIXA
         }
+        if ($boleto->getStatus() == $boleto::STATUS_ALTERACAO) {
+            $this->add(109, 110, self::OCORRENCIA_ALT_VENCIMENTO); // ALTERAR VENCIMENTO
+        }
 
         $this->add(111, 120, Util::formatCnab('X', $boleto->getNumeroDocumento(), 10));
         $this->add(121, 126, $boleto->getDataVencimento()->format('dmy'));
         $this->add(127, 139, Util::formatCnab('9', $boleto->getValor(), 13, 2));
         $this->add(140, 142, $this->getCodigoBanco());
         $this->add(143, 146, Util::formatCnab('9', $this->getAgencia(), 4));
-        $this->add(147, 147, Util::modulo11($this->getAgencia()));
-        $this->add(148, 149, $boleto->getEspecieDocCodigo());
+        $this->add(147, 147, CalculoDv::bancoobAgencia($this->getAgencia()));
+        $this->add(148, 149, isset($this->especie240[$boleto->getEspecieDocCodigo()]) ? $this->especie240[$boleto->getEspecieDocCodigo()] : '99');
 
         $this->add(150, 150, ($boleto->getAceite() == 'N' ? '0' : '1'));
         $this->add(151, 156, $boleto->getDataDocumento()->format('dmy'));
         $this->add(157, 158, $boleto->getStatus() == $boleto::STATUS_BAIXA ? self::OCORRENCIA_BAIXAR : self::INSTRUCAO_SEM);
         $this->add(159, 160, self::INSTRUCAO_SEM);
         $diasProtesto = '00';
-
-        $juros = 0;
-
         if (($boleto->getStatus() != $boleto::STATUS_BAIXA) && ($boleto->getDiasProtesto() > 0)) {
             $const = sprintf('self::INSTRUCAO_PROTESTAR_VENC_%02s', $boleto->getDiasProtesto());
 
@@ -179,16 +211,11 @@ class Bancoob extends AbstractRemessa implements RemessaContract
             } else {
                 throw new \Exception("A instrução para protesto em ".$boleto->getDiasProtesto()." dias não existe no banco.");
             }
-
-            if ($boleto->getJuros() > 0) {
-                $juros = Util::percent($boleto->getValor(), $boleto->getJuros())/30;
-            }
         }
-
-        $this->add(161, 166, Util::formatCnab('9', 0, 6, 4));
-        $this->add(167, 172, Util::formatCnab('9', $juros, 6, 4));
+        $this->add(161, 166, Util::formatCnab('9', $boleto->getJuros(), 6, 4));
+        $this->add(167, 172, Util::formatCnab('9', $boleto->getMulta(), 6, 4));
         $this->add(173, 173, '2'); //Tipo de distribuição: 1 - Cooperativa 2 - Cliente
-        $this->add(174, 179, $boleto->getDataDesconto()->format('dmy'));
+        $this->add(174, 179, $boleto->getDesconto() > 0 ? $boleto->getDataDesconto()->format('dmy') : '000000');
         $this->add(180, 192, Util::formatCnab('9', $boleto->getDesconto(), 13, 2));
         $this->add(193, 193, '9');
         $this->add(194, 205, Util::formatCnab('9', 0, 12, 2));
@@ -208,6 +235,10 @@ class Bancoob extends AbstractRemessa implements RemessaContract
         $this->add(395, 400, Util::formatCnab('9', $this->iRegistros + 1, 6));
     }
 
+    /**
+     * @return $this|mixed
+     * @throws \Exception
+     */
     protected function trailer()
     {
         $this->iniciaTrailer();

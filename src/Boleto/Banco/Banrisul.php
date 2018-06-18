@@ -3,6 +3,7 @@
 namespace Eduardokum\LaravelBoleto\Boleto\Banco;
 
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Util;
 
@@ -42,24 +43,11 @@ class Banrisul extends AbstractBoleto implements BoletoContract
     protected $carteiras = ['1', '2', '3', '4', '5', '6', '7', '8', 'C', 'D', 'E', 'F', 'H', 'I', 'K', 'M', 'N', 'R', 'S', 'X'];
 
     /**
-     * Gera o Duplo digito do nosso npumero
+     * Codigo do cliente junto ao banco.
      *
-     * @param  $nossoNumero
-     * @return int
+     * @var string
      */
-    private function duploDigitoBanrisul($nossoNumero)
-    {
-        $dv1 = Util::modulo10($nossoNumero);
-        $dv2 = Util::modulo11($nossoNumero . $dv1, 2, 7, 0, 10);
-        if ($dv2 == 10) {
-            $dv1++;
-            $dv2 = Util::modulo11($nossoNumero . $dv1, 2, 7, 0, 10);
-            if ($dv1 > 9) {
-                $dv1 = 0;
-            }
-        }
-        return $dv1 . $dv2;
-    }
+    protected $codigoCliente;
 
     /**
      * Seta dias para baixa automática
@@ -88,7 +76,7 @@ class Banrisul extends AbstractBoleto implements BoletoContract
     {
         $numero_boleto = $this->getNumero();
         $nossoNumero = Util::numberFormatGeral($numero_boleto, 8)
-            . $this->duploDigitoBanrisul(Util::numberFormatGeral($numero_boleto, 8));
+            . CalculoDV::banrisulNossoNumero(Util::numberFormatGeral($numero_boleto, 8));
         return $nossoNumero;
     }
     /**
@@ -98,8 +86,7 @@ class Banrisul extends AbstractBoleto implements BoletoContract
      */
     public function getNossoNumeroBoleto()
     {
-        $nn = $this->getNossoNumero();
-        return substr($nn, 0, -2) . '-' . substr($nn, -2);
+        return substr_replace($this->getNossoNumero(), '-', -2, 0);
     }
     /**
      * Método para gerar o código da posição de 20 a 44
@@ -113,26 +100,67 @@ class Banrisul extends AbstractBoleto implements BoletoContract
             return $this->campoLivre;
         }
 
-        // Carteira     => 20 - 20 | Valor: 1(Com registro) ou 2(Sem registro)
-        $this->campoLivre  = '2';
+        $campoLivre = '2';
+        $campoLivre .= '1';
+        $campoLivre .= Util::numberFormatGeral($this->getCodigoCliente(), 11); //4 digitos da agencia + 7 primeiros digitos pois os ultimos 2 são digitos verificadores
+        $campoLivre .= Util::numberFormatGeral($this->getNumero(), 8);
+        $campoLivre .= '40';
+        $campoLivre .= CalculoDV::banrisulDuploDigito(Util::onlyNumbers($campoLivre));
 
-        // Constante    => 21 - 21 | Valor: 1(Constante)
-        $this->campoLivre .= '1';
+        return $this->campoLivre = $campoLivre;
+    }
 
-        // Agencia      => 22 a 25 | Valor: dinâmico(0000) ´4´
-        $this->campoLivre .= Util::numberFormatGeral($this->getAgencia(), 4);
+    /**
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
+     *
+     * @param $campoLivre
+     *
+     * @return array
+     */
+    public static function parseCampoLivre($campoLivre) {
+        return [
+            'carteira' => substr($campoLivre, 0, 1),
+            'agencia' => substr($campoLivre, 2, 4),
+            'contaCorrente' => substr($campoLivre, 6, 7),
+            'nossoNumero' => substr($campoLivre, 13, 8),
+            'nossoNumeroDv' => null,
+            'nossoNumeroFull' => substr($campoLivre, 13, 8),
+        ];
+    }
 
-        // Cod. Cedente => 26 a 32 | Valor: dinâmico(0000000) ´7´
-        $this->campoLivre .= $this->getConta();
+    /**
+     * Retorna o codigo do cliente.
+     *
+     * @return mixed
+     */
+    public function getCodigoCliente()
+    {
+        return $this->codigoCliente;
+    }
 
-        // Nosso numero => 33 a 40 | Valor: dinâmico(00000000) ´8´
-        $this->campoLivre .= Util::numberFormatGeral($this->getNumero(), 8);
+    /**
+     * Seta o codigo do cliente.
+     *
+     * @param mixed $codigoCliente
+     *
+     * @return Banrisul
+     */
+    public function setCodigoCliente($codigoCliente)
+    {
+        $this->codigoCliente = $codigoCliente;
 
-        // Constante    => 41 - 42 | Valor: 40(Constante)
-        $this->campoLivre .= '40';
+        return $this;
+    }
 
-        // Duplo digito => 43 - 44 | Valor: calculado(00) ´2´
-        $this->campoLivre .= $this->duploDigitoBanrisul(Util::onlyNumbers($this->campoLivre));
-        return $this->campoLivre;
+    /**
+     * Retorna o campo Agência/Beneficiário do boleto
+     *
+     * @return string
+     */
+    public function getAgenciaCodigoBeneficiario()
+    {
+        $codigoCliente = $this->getCodigoCliente();
+
+        return $codigoCliente;
     }
 }

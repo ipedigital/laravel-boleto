@@ -2,6 +2,7 @@
 namespace Eduardokum\LaravelBoleto\Boleto\Banco;
 
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Util;
 
@@ -73,7 +74,7 @@ class Sicredi extends AbstractBoleto implements BoletoContract
      * @param  bool $registro
      * @return $this
      */
-    public function setComRegistro(bool $registro)
+    public function setComRegistro($registro)
     {
         $this->registro = $registro;
         return $this;
@@ -149,14 +150,11 @@ class Sicredi extends AbstractBoleto implements BoletoContract
      */
     protected function gerarNossoNumero()
     {
-        $agencia = Util::numberFormatGeral($this->getAgencia(), 4);
-        $posto = Util::numberFormatGeral($this->getPosto(), 2);
-        $conta = Util::numberFormatGeral($this->getConta(), 5);
         $ano = $this->getDataDocumento()->format('y');
         $byte = $this->getByte();
         $numero_boleto = Util::numberFormatGeral($this->getNumero(), 5);
-        $dv = $agencia . $posto . $conta . $ano . $byte . $numero_boleto;
-        $nossoNumero = $ano . $byte . $numero_boleto . Util::modulo11($dv);
+        $nossoNumero = $ano . $byte . $numero_boleto
+            . CalculoDV::sicrediNossoNumero($this->getAgencia(), $this->getPosto(), $this->getConta(), $ano, $byte, $numero_boleto);
         return $nossoNumero;
     }
     /**
@@ -180,28 +178,37 @@ class Sicredi extends AbstractBoleto implements BoletoContract
             return $this->campoLivre;
         }
 
-        $tipo_cobranca = $this->isComRegistro() ? '1' : '3';
-        $carteira = Util::numberFormatGeral($this->getCarteira(), 1);
-        $nosso_numero = $this->getNossoNumero();
-        $agencia = Util::numberFormatGeral($this->getAgencia(), 4);
-        $posto = Util::numberFormatGeral($this->getPosto(), 2);
-        $conta = Util::numberFormatGeral($this->getConta(), 5);
-        $possui_valor = $this->getValor() > 0 ? '1' : '0';
+        $campoLivre = $this->isComRegistro() ? '1' : '3';
+        $campoLivre .= Util::numberFormatGeral($this->getCarteira(), 1);
+        $campoLivre .= $this->getNossoNumero();
+        $campoLivre .= Util::numberFormatGeral($this->getAgencia(), 4);
+        $campoLivre .= Util::numberFormatGeral($this->getPosto(), 2);
+        $campoLivre .= Util::numberFormatGeral($this->getConta(), 5);
+        $campoLivre .= '10';
+        $campoLivre .= Util::modulo11($campoLivre);
 
-        $campo_livre = $tipo_cobranca . $carteira . $nosso_numero . $agencia . $posto . $conta . $possui_valor . '0';
-        return $this->campoLivre = $campo_livre . Util::modulo11($campo_livre);
+        return $this->campoLivre .= $campoLivre;
     }
 
     /**
-     * Retorna o código do banco com o dígito verificador ('X') para o banco Sicredi
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
      *
-     * @return string
+     * @param $campoLivre
+     *
+     * @return array
      */
-    public function getCodigoBancoComDv()
-    {
-        $codigoBanco = $this->getCodigoBanco();
-
-        return $codigoBanco . '-' . 'X';
+    public static function parseCampoLivre($campoLivre) {
+        return [
+            'convenio' => null,
+            'agenciaDv' => null,
+            'contaCorrenteDv' => null,
+            'codigoCliente' => null,
+            'carteira' => substr($campoLivre, 1, 1),
+            'nossoNumero' => substr($campoLivre, 2, 8),
+            'nossoNumeroDv' => substr($campoLivre, 10, 1),
+            'nossoNumeroFull' => substr($campoLivre, 2, 9),
+            'agencia' => substr($campoLivre, 11, 4),
+            'contaCorrente' => substr($campoLivre, 17, 5),
+        ];
     }
-
 }

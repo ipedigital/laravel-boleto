@@ -2,6 +2,7 @@
 namespace Eduardokum\LaravelBoleto\Boleto\Banco;
 
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Util;
 
@@ -23,7 +24,7 @@ class Bb extends AbstractBoleto implements BoletoContract
      *
      * @var array
      */
-    protected $carteiras = array('11', '12', '15', '16', '17', '18', '31', '51');
+    protected $carteiras = ['11', '12', '15', '17', '18', '31', '51'];
     /**
      * Espécie do documento, coódigo para remessa
      *
@@ -128,8 +129,8 @@ class Bb extends AbstractBoleto implements BoletoContract
      */
     public function getNossoNumeroBoleto()
     {
-        $nn = $this->getNossoNumero();
-        return strlen($nn) < 17 ? $nn . '-' . Util::modulo11($nn) : $nn;
+        $nn = $this->getNossoNumero() . CalculoDV::bbNossoNumero($this->getNossoNumero());
+        return strlen($nn) < 17 ? substr_replace($nn, '-', -1, 0) : $nn;
     }
     /**
      * Método para gerar o código da posição de 20 a 44
@@ -159,5 +160,42 @@ class Bb extends AbstractBoleto implements BoletoContract
             return $this->campoLivre = '000000' . $nossoNumero . Util::numberFormatGeral($this->getCarteira(), 2);
         }
         throw new \Exception('O código do convênio precisa ter 4, 6 ou 7 dígitos!');
+    }
+
+    /**
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
+     *
+     * @param $campoLivre
+     *
+     * @return array
+     */
+    public static function parseCampoLivre($campoLivre) {
+        $convenio = substr($campoLivre, 0, 6);
+        $nossoNumero = substr($campoLivre, 6, 5);
+        if ($convenio == '000000') {
+            $convenio = substr($campoLivre, 6, 7);
+            $nossoNumero = substr($campoLivre, 13, 10);
+        }
+        if ($convenio == '0000000' && in_array(substr($campoLivre, -2), ['16', '18']) ) {
+            $convenio = substr($campoLivre, 0, 4);
+            $nossoNumero = substr($campoLivre, 4, 7);
+        }
+        if ($convenio == '0000000' && !in_array(substr($campoLivre, -2), ['16', '18']) ) {
+            $convenio = null;
+            $nossoNumero = substr($campoLivre, 0, 17);
+        }
+
+        return [
+            'codigoCliente' => null,
+            'agencia' => null,
+            'agenciaDv' => null,
+            'contaCorrente' => null,
+            'contaCorrenteDv' => null,
+            'carteira' => substr($campoLivre, -2),
+            'convenio' => $convenio,
+            'nossoNumero' => $nossoNumero,
+            'nossoNumeroDv' => null,
+            'nossoNumeroFull' => $nossoNumero,
+        ];
     }
 }

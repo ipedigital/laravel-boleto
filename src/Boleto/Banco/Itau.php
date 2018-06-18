@@ -2,6 +2,7 @@
 namespace Eduardokum\LaravelBoleto\Boleto\Banco;
 
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Util;
 
@@ -34,7 +35,7 @@ class Itau extends AbstractBoleto implements BoletoContract
      *
      * @var array
      */
-    protected $carteiras = ['112', '115', '188', '109', '121', '180', '175'];
+    protected $carteiras = ['112', '115', '188', '109', '121', '180', '110', '111'];
     /**
      * Espécie do documento, coódigo para remessa
      *
@@ -44,6 +45,7 @@ class Itau extends AbstractBoleto implements BoletoContract
         'DM' => '01',
         'NP' => '02',
         'NS' => '03',
+        'ME' => '04',
         'REC' => '05',
         'CT' => '06',
         'CS' => '07',
@@ -54,30 +56,6 @@ class Itau extends AbstractBoleto implements BoletoContract
         'EC' => '16',
         'CPS' => '17',
     ];
-    /**
-     * Dígito verificador da carteira/nosso número para impressão no boleto
-     *
-     * @var int
-     */
-    protected $carteiraDv;
-    /**
-     * @return int
-     */
-    public function getCarteiraDv()
-    {
-        return $this->carteiraDv;
-    }
-
-    /**
-     * @param integer $carteiraDv
-     *
-     * @return $this
-     */
-    public function setCarteiraDv($carteiraDv)
-    {
-        $this->carteiraDv = $carteiraDv;
-        return $this;
-    }
     /**
      * Seta dias para baixa automática
      *
@@ -104,9 +82,12 @@ class Itau extends AbstractBoleto implements BoletoContract
      */
     protected function gerarNossoNumero()
     {
-        $this->getCampoLivre(); // Força o calculo do DV.
-        $numero_boleto = $this->getNumero();
-        return Util::numberFormatGeral($numero_boleto, 8) . $this->getCarteiraDv();
+        $numero_boleto = Util::numberFormatGeral($this->getNumero(), 8);
+        $carteira = Util::numberFormatGeral($this->getCarteira(), 3);
+        $agencia = Util::numberFormatGeral($this->getAgencia(), 4);
+        $conta = Util::numberFormatGeral($this->getConta(), 5);
+        $dv = CalculoDV::itauNossoNumero($agencia, $conta, $carteira, $numero_boleto);
+        return $numero_boleto . $dv;
     }
     /**
      * Método que retorna o nosso numero usado no boleto. alguns bancos possuem algumas diferenças.
@@ -128,14 +109,36 @@ class Itau extends AbstractBoleto implements BoletoContract
         if ($this->campoLivre) {
             return $this->campoLivre;
         }
-        $numero_boleto = Util::numberFormatGeral($this->getNumero(), 8);
-        $carteira = Util::numberFormatGeral($this->getCarteira(), 3);
-        $agencia = Util::numberFormatGeral($this->getAgencia(), 4);
-        $conta = Util::numberFormatGeral($this->getConta(), 5);
-        $dvAgContaCarteira = Util::modulo10($agencia . $conta . $carteira . $numero_boleto);
-        $this->setCarteiraDv($dvAgContaCarteira);
-        // Módulo 10 Agência/Conta
-        $dvAgConta = Util::modulo10($agencia . $conta);
-        return $this->campoLivre = $carteira . $numero_boleto . $dvAgContaCarteira . $agencia . $conta . $dvAgConta . '000';
+
+        $campoLivre = Util::numberFormatGeral($this->getCarteira(), 3);
+        $campoLivre .= Util::numberFormatGeral($this->getNossoNumero(), 9);
+        $campoLivre .= Util::numberFormatGeral($this->getAgencia(), 4);
+        $campoLivre .= Util::numberFormatGeral($this->getConta(), 5);
+        $campoLivre .= CalculoDV::itauContaCorrente($this->getAgencia(), $this->getConta());
+        $campoLivre .= '000';
+
+        return $this->campoLivre = $campoLivre;
+    }
+
+    /**
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
+     *
+     * @param $campoLivre
+     *
+     * @return array
+     */
+    public static function parseCampoLivre($campoLivre) {
+        return [
+            'convenio' => null,
+            'agenciaDv' => null,
+            'codigoCliente' => null,
+            'carteira' => substr($campoLivre, 0, 3),
+            'nossoNumero' => substr($campoLivre, 3, 8),
+            'nossoNumeroDv' => substr($campoLivre, 11, 1),
+            'nossoNumeroFull' => substr($campoLivre, 3, 9),
+            'agencia' => substr($campoLivre, 12, 4),
+            'contaCorrente' => substr($campoLivre, 16, 5),
+            'contaCorrenteDv' => substr($campoLivre, 21, 1),
+        ];
     }
 }

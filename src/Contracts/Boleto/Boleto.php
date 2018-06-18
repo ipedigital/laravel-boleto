@@ -14,6 +14,7 @@ interface Boleto
     const COD_BANCO_SICREDI = '748';
     const COD_BANCO_BANRISUL = '041';
     const COD_BANCO_BANCOOB = '756';
+    const COD_BANCO_BNB = '004';
 
     const STATUS_REGISTRO = 1;
     const STATUS_ALTERACAO = 2;
@@ -126,6 +127,11 @@ interface Boleto
      * @return mixed
      */
     public function getJuros();
+
+    /**
+     * @return mixed
+     */
+    public function getMoraDia();
 
     /**
      * @return mixed
@@ -245,4 +251,11 @@ interface Boleto
      * @return mixed
      */
     public function baixarBoleto();
+
+    /**
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
+     *
+     * @return array
+     */
+    static public function parseCampoLivre($campoLivre);
 }
