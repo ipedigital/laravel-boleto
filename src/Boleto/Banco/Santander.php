@@ -32,12 +32,17 @@ class Santander  extends AbstractBoleto implements BoletoContract
      * @var string
      */
     protected $especiesCodigo = [
-        'DM' => '01',
-        'NP' => '02',
-        'NS' => '03',
-        'REC' => '05',
-        'DS' => '06',
-        'LC' => '07',
+        'DM'  => '02',
+        'DS'  => '04',
+        'LC'  => '07',
+        'NP'  => '12',
+        'NR'  => '13',
+        'RC'  => '17',
+        'AP'  => '20',
+        'BCC' => '31',
+        'BDP' => '32',
+        'CH'  => '97',
+        'ND'  => '98',
     ];
     /**
      * Define os nomes das carteiras para exibição no boleto
