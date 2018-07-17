@@ -149,6 +149,8 @@ class Santander extends AbstractRemessa implements RemessaContract
     {
         $this->iniciaDetalhe();
 
+        $sacadorAvalista = $boleto->getSacadorAvalista() ? $boleto->getSacadorAvalista() : $boleto->getBeneficiario();
+
         $this->add(1, 3, Util::onlyNumbers($this->getCodigoBanco()));
         $this->add(4, 7, '0001');
         $this->add(8, 8, '3');
@@ -165,9 +167,9 @@ class Santander extends AbstractRemessa implements RemessaContract
         $this->add(134, 136, Util::formatCnab('9', Util::onlyNumbers(substr($boleto->getPagador()->getCep(), 6, 9)), 3));
         $this->add(137, 151, Util::formatCnab('X', $boleto->getPagador()->getCidade(), 15));
         $this->add(152, 153, Util::formatCnab('X', $boleto->getPagador()->getUf(), 2));
-        $this->add(154, 154, strlen(Util::onlyNumbers($boleto->getPagador()->getDocumento())) == 14 ? '2' : '1');
-        $this->add(155, 169, Util::formatCnab('9', Util::onlyNumbers($boleto->getPagador()->getDocumento()), 15));
-        $this->add(170, 209, Util::formatCnab('X', '', 40));
+        $this->add(154, 154, strlen(Util::onlyNumbers($sacadorAvalista->getDocumento())) == 14 ? '2' : '1');
+        $this->add(155, 169, Util::formatCnab('9', Util::onlyNumbers($sacadorAvalista->getDocumento()), 15));
+        $this->add(170, 209, Util::formatCnab('X', $sacadorAvalista->getNome(), 40));
         $this->add(210, 212, '000');
         $this->add(213, 215, '000');
         $this->add(216, 218, '000');
