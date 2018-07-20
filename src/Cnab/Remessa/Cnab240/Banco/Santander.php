@@ -16,6 +16,19 @@ use Eduardokum\LaravelBoleto\Util;
 
 class Santander extends AbstractRemessa implements RemessaContract
 {
+    const OCORRENCIA_REMESSA = '01';
+    const OCORRENCIA_PEDIDO_BAIXA = '02';
+    const OCORRENCIA_CONCESSAO_ABATIMENTO = '04';
+    const OCORRENCIA_CANC_ABATIMENTO = '05';
+    const OCORRENCIA_ALT_VENCIMENTO = '06';
+    const OCORRENCIA_ALT_CONTROLE_PARTICIPANTE = '07';
+    const OCORRENCIA_ALT_SEUNUMERO = '08';
+    const OCORRENCIA_PROTESTAR = '09';
+    const OCORRENCIA_SUSTAR_PROTESTO = '18';
+    const OCORRENCIA_CONCESSAO_DESCONTO = '10';
+    const OCORRENCIA_CANCELAMENTO_DESCONTO = '11';
+    const OCORRENCIA_ALTERACAO_OUTROS_DADOS = '31';
+
     public function __construct(array $params = [])
     {
         parent::__construct($params);
@@ -96,7 +109,12 @@ class Santander extends AbstractRemessa implements RemessaContract
         $this->add(9, 13, Util::formatCnab('9', $this->iRegistrosLote, 5));
         $this->add(14, 14, 'P');
         $this->add(15, 15, '');
-        $this->add(16, 17, Util::formatCnab('9', 01, 2));
+
+        $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_REMESSA, 2));
+        if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
+            $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_REMESSA, 2)); // BAIXA
+        }
+
         $this->add(18, 21, Util::formatCnab('9', $this->getAgencia(), 4));
         $this->add(22, 22, Util::formatCnab('9', '', 1));
         $this->add(23, 31, Util::formatCnab('9', $this->getConta(), 9));
@@ -157,7 +175,12 @@ class Santander extends AbstractRemessa implements RemessaContract
         $this->add(9, 13, Util::formatCnab('9', $this->iRegistrosLote, 5));
         $this->add(14, 14, 'Q');
         $this->add(15, 15, '');
-        $this->add(16, 17, Util::formatCnab('9', 01, 2));
+
+        $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_REMESSA, 2));
+        if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
+            $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_REMESSA, 2)); // BAIXA
+        }
+
         $this->add(18, 18, strlen(Util::onlyNumbers($boleto->getPagador()->getDocumento())) == 14 ? '2' : '1');
         $this->add(19, 33, Util::formatCnab('9', Util::onlyNumbers($boleto->getPagador()->getDocumento()), 15));
         $this->add(34, 73, Util::formatCnab('X', $boleto->getPagador()->getNome(), 40));
