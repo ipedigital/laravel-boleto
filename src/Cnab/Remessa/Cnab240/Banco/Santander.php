@@ -4,6 +4,12 @@
  * User: simetriatecnologia
  * Date: 15/09/16
  * Time: 14:02
+ *
+ * Updated by Guilherme Couto.
+ * User: guicouto
+ * Email: ccoutoguilherme@gmail.com
+ * Date: 09/07/2018
+ * Time: 23:11
  */
 
 namespace Eduardokum\LaravelBoleto\Cnab\Remessa\Cnab240\Banco;
@@ -24,15 +30,19 @@ class Santander extends AbstractRemessa implements RemessaContract
     const OCORRENCIA_ALT_CONTROLE_PARTICIPANTE = '07';
     const OCORRENCIA_ALT_SEUNUMERO = '08';
     const OCORRENCIA_PROTESTAR = '09';
+    const OCORRENCIA_NAO_PROTESTAR = '10';
     const OCORRENCIA_SUSTAR_PROTESTO = '18';
-    const OCORRENCIA_CONCESSAO_DESCONTO = '10';
-    const OCORRENCIA_CANCELAMENTO_DESCONTO = '11';
-    const OCORRENCIA_ALTERACAO_OUTROS_DADOS = '31';
-
+    const OCORRENCIA_ALT_OUTROS_DADOS = '31';
+    const PROTESTO_SEM = '0';
+    const PROTESTO_DIAS_CORRIDOS = '1';
+    const PROTESTO_DIAS_UTEIS = '2';
+    const PROTESTO_PERFIL_BENEFICIARIO = '3';
+    const PROTESTO_AUTOMATICO = '9';
     public function __construct(array $params = [])
     {
         parent::__construct($params);
         $this->addCampoObrigatorio('codigoCliente');
+        $this->addCampoObrigatorio('idremessa');
     }
 
     /**
@@ -91,6 +101,7 @@ class Santander extends AbstractRemessa implements RemessaContract
         $this->segmentoP($boleto);
         if ($boleto->getStatus() == $boleto::STATUS_REGISTRO) {
             $this->segmentoQ($boleto);
+            $this->segmentoR($boleto);
         }
 
         return $this;
@@ -203,7 +214,37 @@ class Santander extends AbstractRemessa implements RemessaContract
 
         return $this;
     }
+    /**
+     * @param BoletoContract $boleto
+     *
+     * @return $this
+     * @throws \Exception
+     */
+    public function segmentoR(BoletoContract $boleto)
+    {
+        $this->iniciaDetalhe();
+        $this->add(1, 3, Util::onlyNumbers($this->getCodigoBanco()));
+        $this->add(4, 7, '0001');
+        $this->add(8, 8, '3');
+        $this->add(9, 13, Util::formatCnab('9', $this->iRegistrosLote, 5));
+        $this->add(14, 14, 'R');
+        $this->add(15, 15, '');
 
+        $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_REMESSA, 2));
+        if ($boleto->getStatus() == $boleto::STATUS_BAIXA) {
+            $this->add(16, 17, Util::formatCnab('9', self::OCORRENCIA_PEDIDO_BAIXA, 2)); // BAIXA
+        }
+
+        $this->add(18, 18, '0');
+        $this->add(19, 26, '00000000');
+        $this->add(27, 41, '000000000000000');
+        $this->add(42, 65, '');
+        $this->add(66, 66, '2'); //1 = VALOR FIXO | 2 = PERCENTUAL
+        $this->add(67, 74, $boleto->getDataVencimento()->format('dmY'));
+        $this->add(75, 89, Util::formatCnab('9', $boleto->getMulta(), 15, 2));  //2,20 = 0000000000220
+        $this->add(90, 240, '');
+        return $this;
+    }
     /**
      * @return $this
      * @throws \Exception
@@ -229,7 +270,7 @@ class Santander extends AbstractRemessa implements RemessaContract
         $this->add(143, 143, '1');
         $this->add(144, 151, $this->getDataRemessa('dmY'));
         $this->add(152, 157, '');
-        $this->add(158, 163, Util::formatCnab('9', 0, 6));
+        $this->add(158, 163, Util::formatCnab('9', $this->getIdremessa(), 6));
         $this->add(164, 166, Util::formatCnab('9', '040', 3));
         $this->add(164, 166, Util::formatCnab('9', '040', 3));
         $this->add(167, 240, '');
