@@ -114,7 +114,7 @@ class Santander356 extends AbstractRemessa implements RemessaContract
      */
     public function getCodigoTransmissao()
     {
-        return Util::formatCnab('9', $this->getAgencia(), 4)
+        return Util::formatCnab('9', $this->getAgencia(), 4) . '0'
             . Util::formatCnab('9', substr($this->getCodigoCliente(), 0, 7), 8);
     }
 
@@ -236,7 +236,7 @@ class Santander356 extends AbstractRemessa implements RemessaContract
                 $delta = $idReceptor * 41;
                 $this->add(12 + $delta, 13 + $delta, Util::formatCnab('X', array_get($dadosPartilha, $idReceptor.'.codigo', ''), 2));
                 $this->add(14 + $delta, 26 + $delta, Util::formatCnab('9', array_get($dadosPartilha, $idReceptor .'.valor',0), 13, 2));
-                $this->add(27 + $delta, 52 + $delta, '0');
+                $this->add(27 + $delta, 52 + $delta, Util::formatCnab('9', 0, 26));
             }
             $this->add(176, 177, '');
             $this->add(178, 216, '0');
