@@ -32,24 +32,28 @@ class Santander  extends AbstractBoleto implements BoletoContract
      * @var string
      */
     protected $especiesCodigo = [
-        'DM'  => '02',
-        'DS'  => '04',
-        'LC'  => '07',
-        'NP'  => '12',
-        'NR'  => '13',
-        'RC'  => '17',
-        'AP'  => '20',
-        'BCC' => '31',
-        'BDP' => '32',
-        'CH'  => '97',
-        'ND'  => '98',
+        'DM' => '02',
+        'DS' => '04',
+        'LC' => '07',
+        'NP' => '12',
+        'NR' => '13',
+        'RC' => '17',
+        'AP' => '20',
+        'BCC'=> '31',
+        'BDP'=> '32',
+        'CH' => '97',
+        'ND' => '98'
     ];
     /**
      * Define os nomes das carteiras para exibição no boleto
      *
      * @var array
      */
-    protected $carteirasNomes = ['101' => 'Cobrança Simples ECR', '102' => 'Cobrança Simples CSR', '201' => 'Penhor'];
+    protected $carteirasNomes = [
+        '101' => 'Cobrança Simples ECR',
+        '102' => 'Cobrança Simples CSR',
+        '201' => 'Penhor'
+    ];
     /**
      * Define o valor do IOS - Seguradoras (Se 7% informar 7. Limitado a 9%) - Demais clientes usar 0 (zero)
      *
@@ -83,6 +87,26 @@ class Santander  extends AbstractBoleto implements BoletoContract
         $codigoCliente = $this->getCodigoCliente();
 
         return $agencia . ' / ' . $codigoCliente;
+    }
+
+    /**
+     * Retorna o código da carteira
+     * @return string
+     */
+    public function getCarteiraNumero(){
+        switch ($this->carteira) {
+            case '101':
+                $carteira = '5';
+                break;
+            case '201':
+                $carteira = '1';
+                break;
+            default:
+                $carteira = $this->carteira;
+                break;
+        }
+
+        return $carteira;
     }
 
     /**
@@ -161,9 +185,9 @@ class Santander  extends AbstractBoleto implements BoletoContract
         if ($this->getDiasProtesto() > 0) {
             throw new \Exception('Você deve usar dias de protesto ou dias de baixa, nunca os 2');
         }
-        if (!in_array($baixaAutomatica, [15, 30])) {
-            throw new \Exception('O Banco Santander so aceita 15 ou 30 dias após o vencimento para baixa automática');
-        }
+//        if (!in_array($baixaAutomatica, [15, 30])) {
+//            throw new \Exception('O Banco Santander so aceita 15 ou 30 dias após o vencimento para baixa automática');
+//        }
         $baixaAutomatica = (int) $baixaAutomatica;
         $this->diasBaixaAutomatica = $baixaAutomatica > 0 ? $baixaAutomatica : 0;
         return $this;
