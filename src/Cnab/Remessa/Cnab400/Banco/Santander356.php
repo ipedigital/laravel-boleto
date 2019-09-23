@@ -239,9 +239,9 @@ class Santander356 extends AbstractRemessa implements RemessaContract
                 $this->add(27 + $delta, 52 + $delta, Util::formatCnab('9', 0, 26));
             }
             $this->add(176, 177, '');
-            $this->add(178, 216, '0');
+            $this->add(178, 216, Util::formatCnab('9', 0, 39));
             $this->add(217, 218, '');
-            $this->add(219, 257, '0');
+            $this->add(219, 257, Util::formatCnab('9', 0, 39));
             $this->add(258, 394, '');
             $this->add(395, 400, Util::formatCnab('9', $this->iRegistros + 1, 6));
         }
