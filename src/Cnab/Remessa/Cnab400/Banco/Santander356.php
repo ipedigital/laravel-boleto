@@ -180,9 +180,9 @@ class Santander356 extends AbstractRemessa implements RemessaContract
         $this->add(39, 62, Util::formatCnab('X', $boleto->getNumeroControle(), 24)); // numero de controle
         $this->add(63, 64, '00');
         $this->add(65, 71, Util::formatCnab('9', $nossoNumero,7));
-        $this->add(72, 72, '0');
-        $this->add(73, 74, '00');
-        $this->add(75, 75, '1');
+        $this->add(72, 72, '0'); // Incidência da Multa - 0' - Sobre o valor Título - 1' - Sobre o valor Corrigido
+        $this->add(73, 74, '00'); // Número de Dias para Multa - 00' - Após Vencimento - 01-99' - Número de Dias Após o vencimento
+        $this->add(75, 75, '1'); // Tipo da Multa: '0' - Valor, '1' - Taxa
         $this->add(76, 88, Util::formatCnab('9', $boleto->getMulta(), 13, 2));
         $this->add(89, 95, '');
         $this->add(96, 104, Util::formatCnab('9', 0, 9));
@@ -203,9 +203,18 @@ class Santander356 extends AbstractRemessa implements RemessaContract
         $this->add(148, 149, $boleto->getEspecieDocCodigo());
         $this->add(150, 150, $boleto->getAceite());
         $this->add(151, 156, $boleto->getDataDocumento()->format('dmy'));
-        $this->add(157, 158, '99'); // não protestar
+
+        // Código do Protesto:
+        // '00' – Conforme cadastro do convênio,
+        // '03-55' Número de dias vencidos para protesto,
+        // '99' - Não protestar
+        $this->add(157, 158, '99');
         $this->add(159, 160, '');
-        $this->add(151, 161, '0'); // Juros cobrados por valor
+
+        // Tipo de juros
+        // '0' - Valor
+        // '1' - Taxa
+        $this->add(161, 161, '0'); // Juros cobrados por valor
         $this->add(162, 173, Util::formatCnab('9', $boleto->getMoraDia(), 12, 2));
         $this->add(174, 179, $boleto->getDesconto() > 0 ? $boleto->getDataDesconto()->format('dmy') : '000000');
         $this->add(180, 192, Util::formatCnab('9', $boleto->getDesconto(), 13, 2));
