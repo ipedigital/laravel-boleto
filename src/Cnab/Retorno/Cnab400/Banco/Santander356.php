@@ -248,8 +248,8 @@ class Santander356 extends AbstractRetorno implements RetornoCnab400
             ->setOperacao($this->rem(3, 9, $header))
             ->setServicoCodigo($this->rem(10, 11, $header))
             ->setServico($this->rem(12, 26, $header))
-            ->setAgencia($this->rem(27, 30, $header))
-            ->setConta($this->rem(31, 38, $header))
+            ->setAgencia($this->rem(28, 31, $header))
+            ->setConvenio($this->rem(34, 39, $header))
             ->setData($this->rem(95, 100, $header));
 
         return true;
