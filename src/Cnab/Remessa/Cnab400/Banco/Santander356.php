@@ -167,7 +167,7 @@ class Santander356 extends AbstractRemessa implements RemessaContract
 
         // Carrega os últimos 8 digitos do nosso numero e devemos desconsiderar
         // e desconsidera o último número porque é o
-        $nossoNumero = substr(substr(Util::onlyNumbers($boleto->getNossoNumero()), -8),0,7);
+        $nossoNumero = substr(Util::onlyNumbers($boleto->getNossoNumero()), -7);
 
         $this->add(1, 1, '1');
         $this->add(2, 3, strlen(Util::onlyNumbers($this->getBeneficiario()->getDocumento())) == 14 ? '02' : '01');
