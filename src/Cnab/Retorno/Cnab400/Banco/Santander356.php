@@ -261,7 +261,7 @@ class Santander356 extends AbstractRetorno implements RetornoCnab400
         $tipoRegistro = $this->rem(1, 1, $detalhe);
 
         if ($tipoRegistro != '1') {
-            return TRUE;
+            return FALSE;
         }
 
         $d = $this->detalheAtual();
