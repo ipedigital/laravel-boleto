@@ -181,7 +181,7 @@ class Santander356 extends AbstractRemessa implements RemessaContract
         $this->add(63, 64, '00');
         $this->add(65, 71, Util::formatCnab('9', $nossoNumero,7));
         $this->add(72, 72, '0'); // Incidência da Multa - 0' - Sobre o valor Título - 1' - Sobre o valor Corrigido
-        $this->add(73, 74, '00'); // Número de Dias para Multa - 00' - Após Vencimento - 01-99' - Número de Dias Após o vencimento
+        $this->add(73, 74, Util::formatCnab('9', $boleto->getJurosApos(), 2)); // Número de Dias para Multa - 00' - Após Vencimento - 01-99' - Número de Dias Após o vencimento
         $this->add(75, 75, '1'); // Tipo da Multa: '0' - Valor, '1' - Taxa
         $this->add(76, 88, Util::formatCnab('9', $boleto->getMulta(), 13, 2));
         $this->add(89, 95, '');
