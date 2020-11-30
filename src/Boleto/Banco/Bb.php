@@ -198,4 +198,23 @@ class Bb extends AbstractBoleto implements BoletoContract
             'nossoNumeroFull' => $nossoNumero,
         ];
     }
+
+    /**
+     * Seta dias para baixa automática
+     *
+     * @param int $baixaAutomatica
+     *
+     * @return $this
+     * @throws \Exception
+     */
+    public function setDiasBaixaAutomatica($baixaAutomatica)
+    {
+        if ($this->getDiasProtesto() > 0) {
+            throw new \Exception('Você deve usar dias de protesto ou dias de baixa, nunca os 2');
+        }
+        $baixaAutomatica = (int) $baixaAutomatica;
+        $this->diasBaixaAutomatica = $baixaAutomatica > 0 ? $baixaAutomatica : 0;
+        return $this;
+    }
+
 }
