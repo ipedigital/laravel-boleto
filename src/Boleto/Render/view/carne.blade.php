@@ -103,7 +103,7 @@
                     <tr>
                         <td class="bottomborder">
                             <div class="titulo">Pagador</div>
-                            <div class="conteudo" style="min-height: 0.6cm">{{ $pagador['nome'] }}</div>
+                            <div class="conteudo" style="min-height: 0.6cm; line-height: 1.1em">{{ $pagador['nome'] }}</div>
                         </td>
                     </tr>
                 </table>
