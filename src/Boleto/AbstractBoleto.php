@@ -5,6 +5,8 @@ namespace Eduardokum\LaravelBoleto\Boleto;
 use Carbon\Carbon;
 use Eduardokum\LaravelBoleto\Boleto\Render\Html;
 use Eduardokum\LaravelBoleto\Boleto\Render\Pdf;
+use Eduardokum\LaravelBoleto\Boleto\Render\PdfCaixa;
+use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto;
 use Eduardokum\LaravelBoleto\Contracts\Pessoa as PessoaContract;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Util;
@@ -128,6 +130,18 @@ abstract class AbstractBoleto implements BoletoContract
      * @var array
      */
     protected $especiesCodigo = [];
+    /**
+     * Espécie do documento, coódigo para remessa
+     *
+     * @var array
+     */
+    protected $especiesCodigo240 = [];
+    /**
+     * Espécie do documento, coódigo para remessa
+     *
+     * @var array
+     */
+    protected $especiesCodigo400 = [];
     /**
      * Número do documento
      *
@@ -295,9 +309,11 @@ abstract class AbstractBoleto implements BoletoContract
     protected $mostrarEnderecoFichaCompensacao = false;
 
     /**
-     * Construtor
+     * AbstractBoleto constructor.
      *
-     * @param array $params Parâmetros iniciais para construção do objeto
+     * @param array $params
+     *
+     * @throws \Exception
      */
     public function __construct($params = [])
     {
@@ -598,6 +614,16 @@ abstract class AbstractBoleto implements BoletoContract
         return $this->dataDocumento;
     }
 
+   /**
+     * Retorna a data do juros após
+     *
+     * @return \Carbon\Carbon
+     */
+    public function getDataVencimentoApos()
+    {
+        return $this->getDataVencimento()->addDays((int) $this->getJurosApos());
+    }
+
     /**
      * Define o campo aceite
      *
@@ -650,13 +676,21 @@ abstract class AbstractBoleto implements BoletoContract
      * Retorna o codigo da Espécie Doc
      *
      * @param int $default
+     * @param int $tipo
      *
      * @return string
      */
-    public function getEspecieDocCodigo($default = 99)
+    public function getEspecieDocCodigo($default = 99, $tipo = 240)
     {
-        return key_exists(strtoupper($this->especieDoc), $this->especiesCodigo)
-            ? $this->especiesCodigo[strtoupper($this->getEspecieDoc())]
+        if (!empty($this->especiesCodigo240) && $tipo == 240) {
+            $especie = $this->especiesCodigo240;
+        } elseif(!empty($this->especiesCodigo400) && $tipo == 400) {
+            $especie = $this->especiesCodigo400;
+        } else {
+            $especie = $this->especiesCodigo;
+        }
+        return key_exists(strtoupper($this->especieDoc), $especie)
+            ? $especie[strtoupper($this->getEspecieDoc())]
             : $default;
     }
 
@@ -1102,7 +1136,7 @@ abstract class AbstractBoleto implements BoletoContract
      */
     public function getMoraDia()
     {
-        if (!$this->getJuros() > 0) {
+        if ($this->getJuros() <= 0) {
            return 0;
         }
         return Util::percent($this->getValor(), $this->getJuros())/30;
@@ -1168,8 +1202,6 @@ abstract class AbstractBoleto implements BoletoContract
      * Seta dias para baixa automática
      *
      * @param int $baixaAutomatica
-     *
-     * @return AbstractBoleto
      * @throws \Exception
      */
     public function setDiasBaixaAutomatica($baixaAutomatica)
@@ -1270,6 +1302,8 @@ abstract class AbstractBoleto implements BoletoContract
     /**
      * Comandar instrução custom
      *
+     * @param $instrucao
+     *
      * @return AbstractBoleto
      */
     public function comandarInstrucao($instrucao)
@@ -1360,6 +1394,8 @@ abstract class AbstractBoleto implements BoletoContract
 
     /**
      * Método que valida se o banco tem todos os campos obrigadotorios preenchidos
+     *
+     * @param $messages
      *
      * @return boolean
      */
@@ -1510,7 +1546,11 @@ abstract class AbstractBoleto implements BoletoContract
      */
     public function renderPDF($print = false, $instrucoes = true)
     {
-        $pdf = new Pdf();
+        if($this->codigoBanco == 104){
+           $pdf = new PdfCaixa();
+        }else{
+           $pdf = new Pdf();
+        }
         $pdf->addBoleto($this);
         !$print || $pdf->showPrint();
         $instrucoes || $pdf->hideInstrucoes();

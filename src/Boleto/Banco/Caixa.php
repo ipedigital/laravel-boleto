@@ -108,6 +108,16 @@ class Caixa  extends AbstractBoleto implements BoletoContract
     }
 
     /**
+     * Na CEF deve retornar agência (sem o DV) / código beneficiário (com DV)
+     * @return [type] [description]
+     */
+    public function getAgenciaCodigoBeneficiario(){
+        return $this->getAgencia() . ' / ' .
+               $this->getCodigoCliente() . '-' .
+               Util::modulo11($this->getCodigoCliente());
+    }
+
+    /**
      * Seta dias para baixa automática
      *
      * @param int $baixaAutomatica
@@ -139,8 +149,12 @@ class Caixa  extends AbstractBoleto implements BoletoContract
 
         $nossoNumero = Util::numberFormatGeral($this->gerarNossoNumero(), 17);
         $beneficiario = Util::numberFormatGeral($this->getCodigoCliente(), 6);
+        $beneficiario .= Util::modulo11($beneficiario);
+        if ($this->getCodigoCliente() > 1100000) {
+            $beneficiario = Util::numberFormatGeral($this->getCodigoCliente(), 7);
+        }
 
-        $campoLivre = $beneficiario . Util::modulo11($beneficiario);
+        $campoLivre = $beneficiario;
         $campoLivre .= substr($nossoNumero, 2, 3);
         $campoLivre .= substr($nossoNumero, 0, 1);
         $campoLivre .= substr($nossoNumero, 5, 3);
@@ -164,6 +178,7 @@ class Caixa  extends AbstractBoleto implements BoletoContract
             'agenciaDv' => null,
             'contaCorrente' => null,
             'contaCorrenteDv' => null,
+            'codigoCliente7' => substr($campoLivre, 0, 7),
             'codigoCliente' => substr($campoLivre, 0, 6),
             'carteira' => substr($campoLivre, 10, 1),
             'nossoNumero' => substr($campoLivre, 7, 3) . substr($campoLivre, 11, 3) . substr($campoLivre, 15, 8),
