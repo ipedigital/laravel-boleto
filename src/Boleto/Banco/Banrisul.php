@@ -163,4 +163,26 @@ class Banrisul extends AbstractBoleto implements BoletoContract
 
         return $codigoCliente;
     }
+
+    /**
+     * Define um array com instruções (máximo 8) para pagamento (método na super classe)
+     * Adiciona a instrução de impago no array de instruções
+     *
+     * @param array $instrucoes
+     *
+     * @return AbstractBoleto
+     * @throws \Exception
+     */
+    public function setInstrucoes(array $instrucoes)
+    {
+        if (count($instrucoes) > 8) {
+            throw new \Exception('Máximo de 8 instruções.');
+        }
+
+        $this->instrucoes = $instrucoes;
+
+        $this->addInstrucao('Devolver se impago após 60 dias do vencimento');
+
+        return $this;
+    }
 }
