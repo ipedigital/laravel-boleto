@@ -175,7 +175,18 @@ class Html implements HtmlContract
             throw new \Exception('Nenhum Boleto adicionado');
         }
 
-        return $this->getBlade()->make('BoletoHtmlRender::boleto', [
+        $bladeName = 'BoletoHtmlRender::boleto';
+        try {
+            if (data_get($this->boleto[0], 'codigo_banco') == '104') {
+                $bladeName = 'BoletoHtmlRender::caixa';
+            }
+            elseif (data_get($this->boleto[0], 'codigo_banco') == '041') {
+                $bladeName = 'BoletoHtmlRender::banrisul';
+            }
+        } catch (\Exception $e) {
+        }
+
+        return $this->getBlade()->make($bladeName, [
             'boletos' => $this->boleto,
             'css' => $this->writeCss(),
             'imprimir_carregamento' => (bool) $this->print,
