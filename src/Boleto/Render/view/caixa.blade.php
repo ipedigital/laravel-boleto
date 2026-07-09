@@ -146,5 +146,9 @@
 
         <!-- Ficha de compensação -->
         @include('BoletoHtmlRender::partials/ficha-compensacao')
+
+        @if(count($boletos) > 1 && count($boletos)-1 != $i)
+            <div style="page-break-before:always"></div>
+        @endif
     @endforeach
 @endsection
