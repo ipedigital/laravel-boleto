@@ -124,31 +124,93 @@ class Pessoa implements PessoaContract
     /**
      * Define o documento (CPF, CNPJ ou CEI)
      *
+     * O CNPJ alfanumérico (IN RFB nº 2.229/2024, em circulação desde 31/07/2026) tem a forma
+     * [0-9A-Z]{12}[0-9]{2}: as doze primeiras posições aceitam letra, os dois dígitos verificadores
+     * não. Por isso o documento NÃO pode ser reduzido a dígitos antes de ser validado — era o que
+     * `substr(Util::onlyNumbers($documento), -14)` fazia, e a consequência não era recusar o
+     * alfanumérico: era aceitá-lo como outro documento. Com três letras sobram onze dígitos, um
+     * comprimento "válido", e o valor seguia adiante classificado como CPF.
+     *
+     * A decisão passa a ser pelo comprimento do documento CANÔNICO (sem máscara, maiúsculas), que é
+     * o mesmo critério para numérico e alfanumérico:
+     *
+     *   11 posições → CPF · 14 → CNPJ (numérico ou alfanumérico) · 10 → CEI
+     *
+     * Documento SEM NENHUM DÍGITO é tratado como ausente, e isso é deliberado: cadastros antigos
+     * usam 'XXXXXXXXXXX' no lugar do documento, e hoje eles atravessam porque `onlyNumbers` devolve
+     * string vazia e comprimento zero está na lista de aceitos. Preservar as letras sem esta guarda
+     * faria esses onze 'X' virarem um CPF no arquivo; recusá-los pararia cobranças que hoje saem.
+     *
+     * Já o documento maior que 14 posições, que antes era truncado em silêncio pelo `substr`, passa
+     * a ser recusado: adaptar documento para caber é o que produz um documento que ninguém informou.
+     *
      * @param string $documento
      *
      * @throws \Exception
      */
     public function setDocumento($documento)
     {
-        $documento = substr(Util::onlyNumbers($documento), -14);
-        if (!in_array(strlen($documento), [10, 11, 14, 0])) {
-            throw new \Exception('Documento inválido');
+        $canonico = self::canonizaDocumento($documento);
+
+        if (!preg_match('/[0-9]/', $canonico)) {
+            $this->documento = '';
+
+            return;
         }
-        $this->documento = $documento;
+
+        if (!in_array(strlen($canonico), array(10, 11, 14))) {
+            throw new \Exception(sprintf('Documento inválido: [%s] tem %d posições; são esperadas 11 (CPF), 14 (CNPJ) ou 10 (CEI)', $canonico, strlen($canonico)));
+        }
+
+        $this->documento = $canonico;
+    }
+
+    /**
+     * Forma canônica do documento: sem máscara, em maiúsculas, só [0-9A-Z].
+     *
+     * Aceita o valor como o usuário digita ('12.abc.345/01de-35') e como o sistema guarda
+     * ('12ABC34501DE35'), e não deixa passar nada fora da allowlist.
+     *
+     * @param string $documento
+     *
+     * @return string
+     */
+    private static function canonizaDocumento($documento)
+    {
+        return preg_replace('/[^0-9A-Z]/', '', Util::upper((string) $documento));
     }
     /**
-     * Retorna o documento (CPF ou CNPJ)
+     * Retorna o documento (CPF ou CNPJ) mascarado
+     *
+     * Sem `Util::onlyNumbers`: o documento já está canônico desde `setDocumento`, e reduzi-lo a
+     * dígitos aqui apagaria as letras do CNPJ alfanumérico no boleto impresso e em tudo que exibe
+     * o pagador. `Util::maskString` encaixa caractere a caractere nas posições '#' do molde, sem
+     * exigir que sejam dígitos.
      *
      * @return string
      */
     public function getDocumento()
     {
         if ($this->getTipoDocumento() == 'CPF') {
-            return Util::maskString(Util::onlyNumbers($this->documento), '###.###.###-##');
+            return Util::maskString($this->documento, '###.###.###-##');
         } elseif ($this->getTipoDocumento() == 'CEI') {
-            return Util::maskString(Util::onlyNumbers($this->documento), '##.#####.#-##');
+            return Util::maskString($this->documento, '##.#####.#-##');
         }
-        return Util::maskString(Util::onlyNumbers($this->documento), '##.###.###/####-##');
+        return Util::maskString($this->documento, '##.###.###/####-##');
+    }
+
+    /**
+     * Retorna o documento sem máscara, na forma canônica — o valor que vai para arquivo posicional.
+     *
+     * Existe porque `getDocumento()` devolve o valor MASCARADO, e as classes de remessa precisavam
+     * desfazer a máscara para escrever no campo. Enquanto isso era feito com `onlyNumbers`, desfazer
+     * a máscara e apagar as letras eram a mesma operação.
+     *
+     * @return string
+     */
+    public function getDocumentoCanonico()
+    {
+        return (string) $this->documento;
     }
 
     /**
@@ -258,15 +320,20 @@ class Pessoa implements PessoaContract
     /**
      * Retorna se o tipo do documento é CPF ou CNPJ ou Documento
      *
+     * Decide pelo comprimento do documento CANÔNICO, não pela contagem de dígitos. Com `onlyNumbers`
+     * um CNPJ alfanumérico de três letras devolvia onze dígitos e era classificado como **CPF** — e é
+     * este método que alimenta o "tipo de inscrição" do arquivo CNAB (01/02, ou 10/20 no Sicredi).
+     * O efeito era o banco receber uma pessoa jurídica declarada como pessoa física.
+     *
      * @return string
      */
     public function getTipoDocumento()
     {
-        $cpf_cnpj_cei = Util::onlyNumbers($this->documento);
+        $tamanho = strlen((string) $this->documento);
 
-        if (strlen($cpf_cnpj_cei) == 11) {
+        if ($tamanho == 11) {
             return 'CPF';
-        } elseif (strlen($cpf_cnpj_cei) == 10) {
+        } elseif ($tamanho == 10) {
             return 'CEI';
         }
 
