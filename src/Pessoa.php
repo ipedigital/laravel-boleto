@@ -150,7 +150,7 @@ class Pessoa implements PessoaContract
      */
     public function setDocumento($documento)
     {
-        $canonico = self::canonizaDocumento($documento);
+        $canonico = Util::documentoCanonico($documento);
 
         if (!preg_match('/[0-9]/', $canonico)) {
             $this->documento = '';
@@ -165,20 +165,6 @@ class Pessoa implements PessoaContract
         $this->documento = $canonico;
     }
 
-    /**
-     * Forma canônica do documento: sem máscara, em maiúsculas, só [0-9A-Z].
-     *
-     * Aceita o valor como o usuário digita ('12.abc.345/01de-35') e como o sistema guarda
-     * ('12ABC34501DE35'), e não deixa passar nada fora da allowlist.
-     *
-     * @param string $documento
-     *
-     * @return string
-     */
-    private static function canonizaDocumento($documento)
-    {
-        return preg_replace('/[^0-9A-Z]/', '', Util::upper((string) $documento));
-    }
     /**
      * Retorna o documento (CPF ou CNPJ) mascarado
      *
@@ -199,19 +185,6 @@ class Pessoa implements PessoaContract
         return Util::maskString($this->documento, '##.###.###/####-##');
     }
 
-    /**
-     * Retorna o documento sem máscara, na forma canônica — o valor que vai para arquivo posicional.
-     *
-     * Existe porque `getDocumento()` devolve o valor MASCARADO, e as classes de remessa precisavam
-     * desfazer a máscara para escrever no campo. Enquanto isso era feito com `onlyNumbers`, desfazer
-     * a máscara e apagar as letras eram a mesma operação.
-     *
-     * @return string
-     */
-    public function getDocumentoCanonico()
-    {
-        return (string) $this->documento;
-    }
 
     /**
      * Define o endereço
