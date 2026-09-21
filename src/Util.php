@@ -462,6 +462,28 @@ final class Util
     }
 
     /**
+     * Forma canônica de um documento: sem máscara, em maiúsculas, só [0-9A-Z].
+     *
+     * Serve para os dois usos que o CNPJ alfanumérico (IN RFB nº 2.229/2024) tornou distintos e que
+     * antes eram a mesma chamada a `onlyNumbers`: **desfazer a máscara** e **contar o comprimento**
+     * para decidir CPF × CNPJ. Com letras no documento, `onlyNumbers` fazia as duas coisas errado.
+     *
+     * '12.abc.345/01de-35' → '12ABC34501DE35' · '04.740.714/0001-97' → '04740714000197'
+     *
+     * É público de propósito: as classes de banco precisam dele para o campo de **tipo de inscrição**,
+     * e um método novo na Pessoa não serviria — o contrato `Contracts\Pessoa` não o declara, e uma
+     * aplicação pode ter a própria implementação do contrato.
+     *
+     * @param string $documento
+     *
+     * @return string
+     */
+    public static function documentoCanonico($documento)
+    {
+        return preg_replace('/[^0-9A-Z]/', '', self::upper((string) $documento));
+    }
+
+    /**
      * Formata um valor para um campo de arquivo posicional CNAB.
      *
      * Tipos:
@@ -501,7 +523,7 @@ final class Util
     {
         $tipo = self::upper($tipo);
         if ($tipo == '9A') {
-            $valor = preg_replace('/[^0-9A-Z]/', '', self::upper((string) $valor));
+            $valor = self::documentoCanonico($valor);
 
             if (mb_strlen($valor) > $tamanho) {
                 throw new \Exception(sprintf('Documento [%s] tem %d posições e não cabe no campo de %d: o arquivo não pode ser gerado com o documento truncado', $valor, mb_strlen($valor), $tamanho));
