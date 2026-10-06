@@ -484,6 +484,30 @@ final class Util
     }
 
     /**
+     * O documento do pagador lido do retorno CNAB 240 (DD-803, A4 do QA ciclo 1; FR-022.1).
+     *
+     * O banco escreve o número de inscrição num campo de 15 posições, com zeros à esquerda (`002809905000132`). Aqui
+     * saem só os zeros que sobram, até 11 posições (inscrição tipo 1, CPF) ou 14 (CNPJ, numérico ou alfanumérico).
+     * Um campo com mais posições significativas segue como veio, e a `Pessoa` o recusa como antes.
+     *
+     * @param string $campo         O número de inscrição como veio no arquivo.
+     * @param string $tipoInscricao O tipo de inscrição da mesma linha ('1' CPF, '2' CNPJ).
+     *
+     * @return string
+     */
+    public static function documentoDoRetorno($campo, $tipoInscricao = null)
+    {
+        $documento = self::documentoCanonico($campo);
+        $excesso = strlen($documento) - ((string) $tipoInscricao === '1' ? 11 : 14);
+
+        if ($excesso > 0 && trim(substr($documento, 0, $excesso), '0') === '') {
+            return substr($documento, $excesso);
+        }
+
+        return $documento;
+    }
+
+    /**
      * Formata um valor para um campo de arquivo posicional CNAB.
      *
      * Tipos:

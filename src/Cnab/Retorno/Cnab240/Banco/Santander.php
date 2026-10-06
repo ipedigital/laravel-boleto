@@ -215,7 +215,7 @@ class Santander extends AbstractRetorno implements RetornoCnab240
                 ->setNumeroControle($this->rem(101, 125, $detalhe))
                 ->setPagador([
                     'nome' => $this->rem(144, 183, $detalhe),
-                    'documento' => $this->rem(129, 143, $detalhe),
+                    'documento' => Util::documentoDoRetorno($this->rem(129, 143, $detalhe), $this->rem(128, 128, $detalhe)),
                 ])
                 ->setValorTarifa(Util::nFloat($this->rem(194, 208, $detalhe)/100, 2, false));
 
