@@ -462,6 +462,78 @@ final class Util
     }
 
     /**
+     * Forma canônica de um documento: sem máscara, em maiúsculas, só [0-9A-Z].
+     *
+     * Serve para os dois usos que o CNPJ alfanumérico (IN RFB nº 2.229/2024) tornou distintos e que
+     * antes eram a mesma chamada a `onlyNumbers`: **desfazer a máscara** e **contar o comprimento**
+     * para decidir CPF × CNPJ. Com letras no documento, `onlyNumbers` fazia as duas coisas errado.
+     *
+     * '12.abc.345/01de-35' → '12ABC34501DE35' · '04.740.714/0001-97' → '04740714000197'
+     *
+     * É público de propósito: as classes de banco precisam dele para o campo de **tipo de inscrição**,
+     * e um método novo na Pessoa não serviria — o contrato `Contracts\Pessoa` não o declara, e uma
+     * aplicação pode ter a própria implementação do contrato.
+     *
+     * @param string $documento
+     *
+     * @return string
+     */
+    public static function documentoCanonico($documento)
+    {
+        return preg_replace('/[^0-9A-Z]/', '', self::upper((string) $documento));
+    }
+
+    /**
+     * O documento do pagador lido do retorno CNAB 240 (DD-803, A4 do QA ciclo 1; FR-022.1).
+     *
+     * O banco escreve o número de inscrição num campo de 15 posições, com zeros à esquerda (`002809905000132`). Aqui
+     * saem só os zeros que sobram, até 11 posições (inscrição tipo 1, CPF) ou 14 (CNPJ, numérico ou alfanumérico).
+     * Um campo com mais posições significativas segue como veio, e a `Pessoa` o recusa como antes.
+     *
+     * @param string $campo         O número de inscrição como veio no arquivo.
+     * @param string $tipoInscricao O tipo de inscrição da mesma linha ('1' CPF, '2' CNPJ).
+     *
+     * @return string
+     */
+    public static function documentoDoRetorno($campo, $tipoInscricao = null)
+    {
+        $documento = self::documentoCanonico($campo);
+        $excesso = strlen($documento) - ((string) $tipoInscricao === '1' ? 11 : 14);
+
+        if ($excesso > 0 && trim(substr($documento, 0, $excesso), '0') === '') {
+            return substr($documento, $excesso);
+        }
+
+        return $documento;
+    }
+
+    /**
+     * Formata um valor para um campo de arquivo posicional CNAB.
+     *
+     * Tipos:
+     *
+     *   '9' | 9 | 'N'    numérico: alinha à direita, completa com zero à esquerda
+     *   '9L' | 'NL'      idem, aplicando onlyNumbers() antes (descarta tudo que não é dígito)
+     *   'A' | 'X'        alfanumérico: alinha à ESQUERDA, completa com espaço à direita
+     *   '9A'             DOCUMENTO alfanumérico: alinha à direita, completa com zero à esquerda,
+     *                    preservando letras — ver abaixo
+     *
+     * O tipo '9A' existe porque nenhum dos outros serve para o campo de documento depois do CNPJ
+     * alfanumérico (IN RFB nº 2.229/2024). O '9L' descarta as letras. O 'A'/'X' as preserva, mas
+     * alinha à esquerda com espaço, o que **desloca** o conteúdo dentro de um campo que o layout
+     * declara alinhado à direita — e um documento deslocado é tão errado quanto um documento
+     * mutilado, com o agravante de parecer certo no arquivo.
+     *
+     * Para documento NUMÉRICO o '9A' produz exatamente os mesmos bytes que o '9L' produzia:
+     * '04.740.714/0001-97' e '04740714000197' viram '04740714000197'; o CPF '529.982.247-25' vira
+     * '00052998224725' no campo de 14. É essa equivalência que garante que a correção não altera
+     * nenhum arquivo dos CNPJ que já existem, e ela é afirmada em teste.
+     *
+     * O '9A' também **recusa** valor maior que o campo, em vez de truncar. O `mb_substr` da última
+     * linha corta em silêncio, e para documento isso significa mandar ao banco um documento que não
+     * é o do cliente. Para os outros tipos o truncamento continua como era — mudar isso teria efeito
+     * em campos de nome, endereço e mensagem, que não são objeto desta correção.
+     *
      * @param        $tipo
      * @param        $valor
      * @param        integer $tamanho
@@ -474,6 +546,16 @@ final class Util
     public static function formatCnab($tipo, $valor, $tamanho, $dec = 0, $sFill = '')
     {
         $tipo = self::upper($tipo);
+        if ($tipo == '9A') {
+            $valor = self::documentoCanonico($valor);
+
+            if (mb_strlen($valor) > $tamanho) {
+                throw new \Exception(sprintf('Documento [%s] tem %d posições e não cabe no campo de %d: o arquivo não pode ser gerado com o documento truncado', $valor, mb_strlen($valor), $tamanho));
+            }
+
+            return str_pad($valor, $tamanho, '0', STR_PAD_LEFT);
+        }
+
         if (in_array($tipo, array('9', 9, 'N', '9L', 'NL'))) {
             if ($tipo == '9L' || $tipo == 'NL') {
                 $valor = self::onlyNumbers($valor);
