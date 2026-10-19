@@ -308,7 +308,7 @@ class Bradesco extends AbstractRetorno implements RetornoCnab240
                 ->setNumeroControle($this->rem(106, 130, $detalhe))
                 ->setPagador([
                     'nome' => $this->rem(149, 188, $detalhe),
-                    'documento' => $this->rem(134, 148, $detalhe),
+                    'documento' => Util::documentoDoRetorno($this->rem(134, 148, $detalhe), $this->rem(133, 133, $detalhe)),
                 ])
                 ->setValorTarifa(Util::nFloat($this->rem(199, 213, $detalhe)/100, 2, false));
 
